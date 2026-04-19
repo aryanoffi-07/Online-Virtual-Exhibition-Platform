@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Panel — ArtVerse</title>
+  <meta name="description" content="ArtVerse admin panel for managing users and exhibits." />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">
+      <div class="logo-icon">🎨</div>
+      ArtVerse
+    </a>
+    <div class="nav-actions">
+      <span style="background:rgba(244,63,94,0.15); color:#fb7185; border:1px solid rgba(244,63,94,0.25); padding:4px 10px; border-radius:20px; font-size:0.75rem; font-weight:700;">⚡ ADMIN</span>
+      <span id="admin-name" style="color:var(--text-muted); font-size:0.875rem;"></span>
+      <a href="/" class="btn btn-ghost btn-sm">← Gallery</a>
+      <button class="btn btn-ghost btn-sm" id="logout-btn">Logout</button>
+    </div>
+  </div>
+</nav>
+
+<div id="toast-container"></div>
+
+<div class="admin-layout">
+
+  <!-- Sidebar -->
+  <aside class="admin-sidebar">
+    <p style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-muted); margin-bottom:1rem; padding:0 14px;">Navigation</p>
+    <div class="admin-nav-item active" data-tab="dashboard" id="nav-dashboard">
+      <span class="nav-icon">📊</span> Dashboard
+    </div>
+    <div class="admin-nav-item" data-tab="pending" id="nav-pending">
+      <span class="nav-icon">⏳</span> Pending Submissions
+      <span id="pending-badge" style="margin-left:auto; background:rgba(245,158,11,0.2); color:#fbbf24; border-radius:12px; padding:2px 8px; font-size:0.7rem; font-weight:700;"></span>
+    </div>
+    <div class="admin-nav-item" data-tab="exhibits" id="nav-exhibits">
+      <span class="nav-icon">🖼️</span> All Exhibits
+    </div>
+    <div class="admin-nav-item" data-tab="users" id="nav-users">
+      <span class="nav-icon">👥</span> Users
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="admin-content">
+
+    <!-- Dashboard Tab -->
+    <div id="tab-dashboard" class="tab-panel">
+      <h2 style="margin-bottom:1.5rem;">📊 Dashboard Overview</h2>
+      <div class="stats-grid" id="stats-grid">
+        <div class="loading-overlay" style="grid-column:1/-1; padding:2rem;"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- Pending Submissions Tab -->
+    <div id="tab-pending" class="tab-panel" hidden>
+      <h2 style="margin-bottom:1.5rem;">⏳ Pending Submissions</h2>
+      <div id="pending-list">
+        <div class="loading-overlay"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- All Exhibits Tab -->
+    <div id="tab-exhibits" class="tab-panel" hidden>
+      <div class="section-header">
+        <h2>🖼️ All Exhibits</h2>
+        <select id="exhibit-status-filter" class="form-control" style="width:160px;">
+          <option value="">All Statuses</option>
+          <option value="approved">Approved</option>
+          <option value="pending">Pending</option>
+          <option value="rejected">Rejected</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Category</th>
+              <th>Creator</th>
+              <th>Status</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="exhibits-table-body">
+            <tr><td colspan="6" style="text-align:center; padding:2rem; color:var(--text-muted);">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Users Tab -->
+    <div id="tab-users" class="tab-panel" hidden>
+      <h2 style="margin-bottom:1.5rem;">👥 User Management</h2>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Joined</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="users-table-body">
+            <tr><td colspan="6" style="text-align:center; padding:2rem; color:var(--text-muted);">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/admin.js"></script>
+</body>
+</html>

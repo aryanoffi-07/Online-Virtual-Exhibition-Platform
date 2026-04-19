@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ArtVerse — Online Virtual Exhibition Platform</title>
+  <meta name="description" content="Discover extraordinary art and photography from creators worldwide. Browse, interact, and immerse yourself in virtual exhibitions." />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar">
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">
+      <div class="logo-icon">🎨</div>
+      ArtVerse
+    </a>
+    <ul class="nav-links">
+      <li><a href="/" class="active" id="nav-browse">Gallery</a></li>
+      <li><a href="/?category=Art" id="nav-art">Art</a></li>
+      <li><a href="/?category=Photography" id="nav-photo">Photography</a></li>
+    </ul>
+    <div class="nav-actions" id="nav-actions">
+      <a href="/login" class="btn btn-outline btn-sm" id="nav-login-btn">Login</a>
+      <a href="/register" class="btn btn-primary btn-sm" id="nav-register-btn">Join Free</a>
+    </div>
+  </div>
+</nav>
+
+<!-- Toast Container -->
+<div id="toast-container"></div>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-glow"></div>
+  <div class="container" style="position:relative; z-index:1;">
+    <div class="hero-eyebrow">✨ Virtual Exhibition Platform</div>
+    <h1 class="font-display">
+      Explore <span class="text-gradient">Art & Photography</span><br/>
+      from Around the World
+    </h1>
+    <p>Discover breathtaking artworks and photography from talented creators. Immerse yourself in curated virtual exhibitions.</p>
+    <div class="hero-actions">
+      <a href="#gallery" class="btn btn-primary btn-lg">Browse Gallery</a>
+      <a href="/register" class="btn btn-outline btn-lg" id="hero-create-btn">Start Creating</a>
+    </div>
+  </div>
+</section>
+
+<!-- Search & Filter -->
+<div class="page-container">
+  <div class="search-bar" id="search-bar">
+    <div class="search-input-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="search-input" class="search-input" placeholder="Search artworks, photographers..." />
+    </div>
+    <div class="filter-pills">
+      <button class="filter-pill active" data-category="">All</button>
+      <button class="filter-pill" data-category="Art">🎨 Art</button>
+      <button class="filter-pill" data-category="Photography">📷 Photography</button>
+    </div>
+  </div>
+
+  <!-- Gallery -->
+  <section id="gallery" class="section" style="margin-top: 2.5rem;">
+    <div class="section-header">
+      <h2 class="section-title">Featured Exhibits</h2>
+      <span id="result-count" style="color: var(--text-muted); font-size: 0.875rem;"></span>
+    </div>
+    <div id="gallery-grid" class="gallery-grid">
+      <div class="loading-overlay">
+        <div class="spinner"></div>
+        <span>Loading exhibits...</span>
+      </div>
+    </div>
+    <div id="pagination" class="pagination"></div>
+  </section>
+</div>
+
+<!-- Footer -->
+<footer style="border-top:1px solid var(--border-glass); padding: 2rem; text-align:center; color:var(--text-muted); font-size:0.875rem; position:relative; z-index:1; margin-top:3rem;">
+  <p>© 2024 ArtVerse · Online Virtual Exhibition Platform · Built with ❤️</p>
+</footer>
+
+<script src="/js/api.js"></script>
+<script src="/js/browse.js"></script>
+</body>
+</html>

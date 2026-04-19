@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title id="page-title">Exhibit — ArtVerse</title>
+  <meta name="description" content="View artwork details, like, comment and share." />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">
+      <div class="logo-icon">🎨</div>
+      ArtVerse
+    </a>
+    <ul class="nav-links">
+      <li><a href="/">← Back to Gallery</a></li>
+    </ul>
+    <div class="nav-actions" id="nav-actions"></div>
+  </div>
+</nav>
+
+<div id="toast-container"></div>
+
+<div class="page-container">
+  <div id="exhibit-loading" class="loading-overlay" style="padding:5rem;">
+    <div class="spinner"></div><span>Loading exhibit...</span>
+  </div>
+
+  <div id="exhibit-content" hidden>
+    <!-- Two-column layout: media + info -->
+    <div style="display:grid; grid-template-columns: 1fr 420px; gap:2.5rem; align-items:start;">
+
+      <!-- Left: Media -->
+      <div>
+        <div id="media-container" style="margin-bottom:1.5rem;"></div>
+
+        <!-- Interact Bar -->
+        <div class="interact-bar" style="margin-bottom:2rem;">
+          <button class="interact-btn" id="like-btn">❤️ <span id="like-count">0</span> Likes</button>
+          <button class="interact-btn" id="share-btn">🔗 Share <span id="share-count" style="color:var(--text-muted); font-size:0.78rem;"></span></button>
+          <div id="creator-actions" style="margin-left:auto; display:flex; gap:0.5rem;"></div>
+        </div>
+
+        <!-- Comments -->
+        <div class="card" style="padding:1.5rem;">
+          <h3 style="margin-bottom:1.25rem;">💬 Comments</h3>
+          <form id="comment-form" style="display:none; margin-bottom:1.5rem;">
+            <div class="form-group" style="margin-bottom:0.75rem;">
+              <textarea id="comment-input" class="form-control" rows="2" placeholder="Share your thoughts..."></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm" id="comment-btn">Post Comment</button>
+          </form>
+          <div id="comment-login-prompt" style="display:none; margin-bottom:1rem; font-size:0.875rem; color:var(--text-muted);">
+            <a href="/login">Login</a> to leave a comment.
+          </div>
+          <div id="comments-list">
+            <div class="loading-overlay" style="padding:1.5rem;"><div class="spinner"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Exhibit Info -->
+      <div style="position:sticky; top:80px;">
+        <div class="card" style="padding:1.75rem; margin-bottom:1rem;">
+          <div id="exhibit-category" style="margin-bottom:0.75rem;"></div>
+          <h1 id="exhibit-title" style="font-size:1.5rem; margin-bottom:0.75rem;"></h1>
+          <p id="exhibit-description" style="color:var(--text-secondary); line-height:1.7; margin-bottom:1.25rem;"></p>
+
+          <!-- Creator info -->
+          <div style="border-top:1px solid var(--border-glass); padding-top:1rem; margin-top:0.5rem;">
+            <p style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:0.75rem;">Artist</p>
+            <div id="creator-info" style="display:flex; align-items:center; gap:12px;"></div>
+          </div>
+
+          <!-- Tags -->
+          <div id="tags-section" style="margin-top:1.25rem; display:none;">
+            <p style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:0.5rem;">Tags</p>
+            <div id="tags-list" style="display:flex; flex-wrap:wrap; gap:0.4rem;"></div>
+          </div>
+
+          <!-- Date -->
+          <p id="exhibit-date" style="font-size:0.78rem; color:var(--text-muted); margin-top:1rem;"></p>
+        </div>
+
+        <!-- Related / Stats -->
+        <div class="card" style="padding:1.25rem;">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; text-align:center;">
+            <div>
+              <div id="stat-likes" style="font-size:1.5rem; font-weight:800; color:var(--accent-rose);">0</div>
+              <div style="font-size:0.75rem; color:var(--text-muted);">Likes</div>
+            </div>
+            <div>
+              <div id="stat-shares" style="font-size:1.5rem; font-weight:800; color:var(--accent-violet-light);">0</div>
+              <div style="font-size:0.75rem; color:var(--text-muted);">Shares</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<style>
+  @media (max-width: 860px) {
+    #exhibit-content > div { grid-template-columns: 1fr !important; }
+    #exhibit-content > div > div:last-child { position: static !important; }
+  }
+</style>
+
+<script src="/js/api.js"></script>
+<script src="/js/exhibit.js"></script>
+</body>
+</html>
