@@ -101,6 +101,14 @@ function setupProfileForm() {
     }
   });
 }
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
+  });
+}
 
 function setupUploadForm() {
   document.getElementById('upload-form')?.addEventListener('submit', async (e) => {
@@ -113,7 +121,23 @@ function setupUploadForm() {
       const title = document.getElementById('u-title').value.trim();
       const description = document.getElementById('u-desc').value.trim();
       const category = document.getElementById('u-category').value;
-      const mediaLink = document.getElementById('u-medialink').value.trim();
+      let mediaLink = '';
+      const mediaSource = document.querySelector('input[name="mediaSource"]:checked').value;
+      if (mediaSource === 'link') {
+        mediaLink = document.getElementById('u-medialink').value.trim();
+      } else {
+        const fileInput = document.getElementById('u-mediafile');
+        if (fileInput.files.length > 0) {
+          const file = fileInput.files[0];
+          if (file.size > 5 * 1024 * 1024) {
+            showToast('Image file size must be below 5MB', 'error');
+            btn.disabled = false;
+            btn.textContent = 'Submit Exhibit';
+            return;
+          }
+          mediaLink = await fileToBase64(file);
+        }
+      }
       const mediaType = document.getElementById('u-mediatype').value;
       const tagsRaw = document.getElementById('u-tags').value;
       const tags = tagsRaw.split(',').map(t => t.trim()).filter(Boolean);
@@ -149,9 +173,42 @@ function setupMediaPreview() {
   const previewImg = document.getElementById('preview-img');
   const previewVid = document.getElementById('preview-vid');
 
-  function updatePreview() {
-    const link = linkInput?.value.trim();
+  const linkRadio = document.querySelector('input[value="link"]');
+  const uploadRadio = document.querySelector('input[value="upload"]');
+  const sourceLinkDiv = document.getElementById('source-link');
+  const sourceUploadDiv = document.getElementById('source-upload');
+  const fileInput = document.getElementById('u-mediafile');
+
+  function toggleSource() {
+    if (uploadRadio.checked) {
+      sourceLinkDiv.style.display = 'none';
+      sourceUploadDiv.style.display = 'block';
+      typeSelect.value = 'image';
+      Array.from(typeSelect.options).find(o => o.value === 'video').disabled = true;
+    } else {
+      sourceLinkDiv.style.display = 'block';
+      sourceUploadDiv.style.display = 'none';
+      Array.from(typeSelect.options).find(o => o.value === 'video').disabled = false;
+    }
+    updatePreview();
+  }
+
+  async function updatePreview() {
     const type = typeSelect?.value;
+    let link = '';
+
+    if (uploadRadio && uploadRadio.checked) {
+      if (fileInput && fileInput.files.length > 0) {
+        try {
+          link = await fileToBase64(fileInput.files[0]);
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    } else {
+      link = linkInput?.value.trim();
+    }
+
     if (!link) { previewDiv.style.display = 'none'; return; }
 
     previewDiv.style.display = 'block';
@@ -169,6 +226,9 @@ function setupMediaPreview() {
 
   linkInput?.addEventListener('input', updatePreview);
   typeSelect?.addEventListener('change', updatePreview);
+  fileInput?.addEventListener('change', updatePreview);
+  linkRadio?.addEventListener('change', toggleSource);
+  uploadRadio?.addEventListener('change', toggleSource);
 }
 
 function renderMyExhibits(exhibits) {

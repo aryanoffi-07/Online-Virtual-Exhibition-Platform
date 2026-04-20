@@ -79,9 +79,23 @@
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label" for="u-medialink">Image / Video URL</label>
-            <input type="url" id="u-medialink" class="form-control" placeholder="https://..." required />
-            <p class="form-hint">Paste a direct link to your image or video. The platform will display it directly.</p>
+            <label class="form-label">Media Source</label>
+            <div style="display:flex; gap:1.5rem; margin-bottom:0.75rem;">
+              <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                <input type="radio" name="mediaSource" value="link" checked /> Link URL
+              </label>
+              <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                <input type="radio" name="mediaSource" value="upload" /> Upload Image
+              </label>
+            </div>
+            <div id="source-link">
+              <input type="url" id="u-medialink" class="form-control" placeholder="https://..." />
+              <p class="form-hint">Paste a direct link to your image or video.</p>
+            </div>
+            <div id="source-upload" style="display:none;">
+              <input type="file" id="u-mediafile" class="form-control" accept="image/*" />
+              <p class="form-hint">Max file size: 5MB.</p>
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label" for="u-mediatype">Media Type</label>
