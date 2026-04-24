@@ -1,0 +1,977 @@
+================================================================================
+    ARTVERSE - ONLINE VIRTUAL EXHIBITION PLATFORM
+    COMPLETE PROJECT DOCUMENTATION
+    All Modules, Libraries, Tags, Attributes & Functions
+================================================================================
+
+================================================================================
+SECTION 1: PROJECT DEPENDENCIES & NPM LIBRARIES
+================================================================================
+
+1. EXPRESS (^4.18.2)
+   - USE: Web server framework for building RESTful API and serving static files
+   - METHODS USED:
+     * express() - Creates Express application instance
+     * app.use() - Adds middleware
+     * app.get() / app.post() / app.put() / app.delete() - Define route handlers
+     * app.listen() - Starts HTTP server on specified port
+
+2. MONGOOSE (^8.0.3)
+   - USE: MongoDB object modeling and database interaction
+   - METHODS USED:
+     * mongoose.Schema() - Define database schema structure
+     * mongoose.model() - Create data model from schema
+     * mongoose.connect() - Connect to MongoDB database
+     * Schema.pre() / Schema.post() - Middleware hooks for lifecycle events
+     * find() / findOne() / findById() - Query operations
+     * create() / save() / delete() - CRUD operations
+     * populate() - Join referenced documents
+     * countDocuments() - Count matching documents
+
+3. BCRYPTJS (^2.4.3)
+   - USE: Password hashing and security
+   - METHODS USED:
+     * bcrypt.hash() - Hash passwords before storing
+     * bcrypt.compare() - Compare plain password with hashed password
+
+4. JSONWEBTOKEN (^9.0.2)
+   - USE: Generate and verify JWT tokens for authentication
+   - METHODS USED:
+     * jwt.sign() - Create JWT token with payload
+     * jwt.verify() - Validate and decode JWT token
+
+5. CORS (^2.8.5)
+   - USE: Enable Cross-Origin Resource Sharing for API requests
+   - METHODS USED:
+     * cors() - Middleware to handle CORS headers
+
+6. DOTENV (^16.3.1)
+   - USE: Load environment variables from .env file
+   - METHODS USED:
+     * dotenv.config() - Load environment variables at startup
+
+7. PATH (Built-in Node.js module)
+   - USE: Handle file and directory paths
+   - METHODS USED:
+     * path.join() - Concatenate path segments
+     * __dirname - Get current directory name
+
+8. FS (Built-in Node.js module) - REFERENCED but NOT actively used
+   - USE: File system operations
+   - POTENTIAL: Future file upload handling
+
+================================================================================
+SECTION 2: NODEJS BUILT-IN MODULES
+================================================================================
+
+1. PATH
+   - path.join(__dirname, 'public') - Serve static files from public directory
+   - Used in server.js for routing HTML pages
+
+2. PROCESS
+   - process.env - Access environment variables
+   - process.exit() - Exit application process
+
+================================================================================
+SECTION 3: DATABASE MODELS & SCHEMA
+================================================================================
+
+1. USER MODEL (models/User.js)
+   Fields:
+   - name (String, required, trimmed) - User's display name
+   - email (String, required, unique, lowercase) - User's email address
+   - password (String, required) - Hashed password
+   - role (String, enum: ['visitor', 'creator', 'admin'], default: 'visitor')
+   - bio (String, default: '') - User biography
+   - profilePicLink (String, default: '') - Profile picture URL
+   - isBanned (Boolean, default: false) - Account suspension status
+   - timestamps: true - Auto createdAt, updatedAt fields
+   
+   Methods:
+   - matchPassword(enteredPassword) - Compare password for login
+   - Hooks: pre-save middleware for password hashing
+
+2. EXHIBIT MODEL (models/Exhibit.js)
+   Fields:
+   - title (String, required, trimmed) - Artwork title
+   - description (String, required) - Artwork description
+   - category (String, enum: ['Art', 'Photography'], required)
+   - mediaLink (String, required) - URL to image/video file
+   - mediaType (String, enum: ['image', 'video'], default: 'image')
+   - creator (ObjectId, ref: 'User', required) - Creator's user ID
+   - status (String, enum: ['pending', 'approved', 'rejected'], default: 'pending')
+   - likes (Array of ObjectId, ref: 'User') - Array of user IDs who liked
+   - shareCount (Number, default: 0) - Number of times shared
+   - tags (Array of String) - Search and categorization tags
+   - timestamps: true - Auto createdAt, updatedAt
+
+3. COMMENT MODEL (models/Comment.js)
+   Fields:
+   - exhibit (ObjectId, ref: 'Exhibit', required) - Parent exhibit ID
+   - author (ObjectId, ref: 'User', required) - Comment author's user ID
+   - text (String, required, trimmed) - Comment content
+   - timestamps: true - Auto createdAt, updatedAt
+
+================================================================================
+SECTION 4: API ROUTES & ENDPOINTS
+================================================================================
+
+AUTH ROUTES (routes/auth.js):
+1. POST /api/auth/register
+   - Body: { name, email, password, role }
+   - Response: { message, token, user }
+   - Use: Register new user account
+
+2. POST /api/auth/login
+   - Body: { email, password }
+   - Response: { message, token, user }
+   - Use: Authenticate user and get JWT token
+
+EXHIBITS ROUTES (routes/exhibits.js):
+1. GET /api/exhibits
+   - Query: { category, search, page, limit }
+   - Response: { exhibits, total, page, pages }
+   - Use: Browse all approved exhibits with filtering and pagination
+   - Filters: Status='approved' only, search by title/description/tags, category filter
+
+2. GET /api/exhibits/:id
+   - Response: Exhibit object with populated creator info
+   - Use: Get single exhibit detail page
+
+3. POST /api/exhibits (Protected, Creator+)
+   - Body: { title, description, category, mediaLink, mediaType, tags }
+   - Response: { message, exhibit }
+   - Use: Create new exhibit submission
+   - Status: Auto-set to 'pending'
+
+4. PUT /api/exhibits/:id (Protected, Creator+)
+   - Body: { title, description, category, mediaLink, mediaType, tags }
+   - Use: Edit own exhibit (resets status to pending for re-approval)
+   - Auth: Creator or owner verification
+
+5. DELETE /api/exhibits/:id (Protected)
+   - Use: Delete exhibit (creator or admin only)
+   - Cascades: Also deletes all comments on exhibit
+
+6. POST /api/exhibits/:id/like (Protected)
+   - Use: Toggle like on exhibit
+   - Response: { likes (count), liked (boolean) }
+
+7. POST /api/exhibits/:id/comment (Protected)
+   - Body: { text }
+   - Response: Comment object with populated author info
+   - Use: Add comment to exhibit
+
+USERS ROUTES (routes/users.js):
+1. GET /api/users/profile (Protected)
+   - Response: { user, exhibits (creator's exhibits) }
+   - Use: Get current user's profile and their exhibits
+
+2. PUT /api/users/profile (Protected)
+   - Body: { name, bio, profilePicLink }
+   - Response: { message, user }
+   - Use: Update own profile
+
+3. GET /api/users/:id (Public)
+   - Response: { user (public info only), exhibits (approved only) }
+   - Use: View public profile of another user
+
+ADMIN ROUTES (routes/admin.js):
+1. GET /api/admin/stats (Protected, Admin only)
+   - Response: { totalUsers, totalExhibits, pendingExhibits, approvedExhibits, rejectedExhibits, totalComments }
+   - Use: Dashboard statistics
+
+2. GET /api/admin/users (Protected, Admin only)
+   - Response: Array of all users (password excluded)
+   - Use: User management page
+
+3. PUT /api/admin/users/:id (Protected, Admin only)
+   - Body: { role, isBanned }
+   - Response: { message, user }
+   - Use: Change user role or ban status
+
+4. DELETE /api/admin/users/:id (Protected, Admin only)
+   - Use: Delete user and cascade delete their exhibits
+   - Prevents: Self-deletion
+
+5. GET /api/admin/exhibits (Protected, Admin only)
+   - Query: { status } (optional)
+   - Response: Array of all exhibits with specified status
+   - Use: Browse all exhibits by status
+
+6. PUT /api/admin/exhibits/:id/approve (Protected, Admin only)
+   - Use: Approve pending exhibit
+   - Sets: status = 'approved'
+
+7. PUT /api/admin/exhibits/:id/reject (Protected, Admin only)
+   - Use: Reject pending exhibit
+   - Sets: status = 'rejected'
+
+8. DELETE /api/admin/exhibits/:id (Protected, Admin only)
+   - Use: Delete exhibit and cascade delete comments
+
+================================================================================
+SECTION 5: MIDDLEWARE
+================================================================================
+
+FILE: middleware/auth.js
+
+1. protect(req, res, next)
+   - PURPOSE: Verify JWT token and authenticate user
+   - CHECKS: Authorization header with Bearer token
+   - SETS: req.user object with decoded token data { id, role, name }
+   - RETURNS: 401 if no token or invalid token
+
+2. creatorOnly(req, res, next)
+   - PURPOSE: Restrict route to creators and admins only
+   - CHECKS: req.user.role must be 'creator' or 'admin'
+   - RETURNS: 403 if unauthorized
+
+3. adminOnly(req, res, next)
+   - PURPOSE: Restrict route to admins only
+   - CHECKS: req.user.role must be 'admin'
+   - RETURNS: 403 if unauthorized
+
+================================================================================
+SECTION 6: FRONTEND PAGES (HTML)
+================================================================================
+
+PAGE: public/index.html (Gallery/Browse Page)
+- Main landing page showing all approved exhibits
+- Features: Search, filter by category, pagination
+- Components: Navbar, Hero section, Search bar, Gallery grid, Footer
+
+PAGE: public/login.html
+- User login form
+- Fields: Email, Password
+- Features: Remember status, error display, redirect to home or admin panel
+
+PAGE: public/register.html
+- User registration form
+- Fields: Full Name, Email, Password, Role selection (Visitor/Creator)
+- Role selector: Radio buttons for visitor vs creator selection
+- Features: Inline role icons, password validation
+
+PAGE: public/profile.html
+- User profile page (Protected - requires login)
+- Sections:
+  1. Profile Header: Avatar, Name, Email, Bio, Role badge
+  2. Edit Profile Form: Name, Bio, Profile Picture URL
+  3. Upload Exhibit Form (Creator only):
+     - Title, Description, Category, Media source (Link/Upload)
+     - Media Type, Tags, Preview
+  4. My Exhibits List: All user's exhibits with status badges
+
+PAGE: public/exhibit.html
+- Single exhibit detail page
+- Sections:
+  1. Media Container: Image or Video viewer
+  2. Interact Bar: Like button, Share button, Creator actions
+  3. Exhibit Info: Title, Description, Creator info, Tags, Date
+  4. Comments Section: Comment form (if logged in), Comments list
+  5. Stats Card: Total likes and shares
+
+PAGE: public/admin.html
+- Admin control panel (Protected - admin only)
+- Sidebar Navigation: Dashboard, Pending, Exhibits, Users
+- Tabs:
+  1. Dashboard: Statistics cards (users, exhibits, status counts, comments)
+  2. Pending Submissions: Cards with approve/reject/delete buttons
+  3. All Exhibits: Table with filter by status
+  4. Users: Table with role selector and ban/delete controls
+
+================================================================================
+SECTION 7: HTML TAGS & ATTRIBUTES USED
+================================================================================
+
+DOCUMENT STRUCTURE:
+- <!DOCTYPE html> - HTML5 document type
+- <html lang="en"> - Root element with language attribute
+- <head> - Metadata and links
+- <meta charset="UTF-8" /> - Character encoding
+- <meta name="viewport" content="width=device-width, initial-scale=1.0" /> - Responsive viewport
+- <meta name="description" content="..." /> - SEO description
+- <title> - Page title
+- <link rel="stylesheet" href="..."> - CSS stylesheet link
+- <body> - Main content container
+
+NAVIGATION:
+- <nav class="navbar"> - Navigation bar
+- <a href="..."> - Links and anchors
+- <ul> / <li> - Navigation lists
+
+FORM ELEMENTS:
+- <form id="..."> - Form container
+- <input type="text/email/password/url/file/number" /> - Text inputs
+- <textarea> - Multi-line text input
+- <select> / <option> - Dropdown selectors
+- <label for="..."> - Form labels
+- <button type="submit/button"> - Buttons
+- <input type="radio" name="..." /> - Radio buttons
+- <input type="checkbox" /> - Checkboxes
+
+MEDIA:
+- <img src="..." alt="..." /> - Images with alt text
+- <img loading="lazy" /> - Lazy loading for performance
+- <video src="..." controls /> - Video player with controls
+- <video muted /> - Muted videos
+- <video preload="metadata" /> - Video preloading hints
+
+CONTENT SECTIONS:
+- <section class="..."> - Content sections
+- <div> - Generic containers
+- <header> / <footer> - Page headers/footers
+- <main> - Main content
+- <aside> - Sidebar content
+- <article> - Article content
+
+TEXT FORMATTING:
+- <h1>, <h2>, <h3>, <h4> - Headings
+- <p> - Paragraphs
+- <span> - Inline text wrapper
+- <strong> - Bold text
+- <em> - Emphasized text
+
+GRID & LAYOUT:
+- <div class="container"> - Page container
+- <div class="page-container"> - Page wrapper
+- <div class="two-col"> - Two column layout
+- Tables: <table> / <thead> / <tbody> / <tr> / <th> / <td>
+
+LOADING & EMPTY STATES:
+- <div class="loading-overlay"> - Loading spinner container
+- <div class="spinner"> - Loading spinner
+- <div class="empty-state"> - Empty state placeholder
+
+COMMON ATTRIBUTES:
+- id="..." - Unique element identifier
+- class="..." - CSS class names
+- data-* - Custom data attributes
+- style="..." - Inline styles
+- hidden - HTML5 hidden attribute
+- disabled - Disable form elements
+- required - Required form field
+- onerror="..." - Error handler for media
+- onchange="..." - Change handler for form inputs
+- onclick="..." - Click handler
+
+================================================================================
+SECTION 8: CSS CLASSES & DESIGN TOKENS
+================================================================================
+
+LAYOUT CLASSES:
+- .navbar - Navigation bar styling
+- .container - Main container
+- .page-container - Page wrapper with padding
+- .section - Content section
+- .card - Card component with glass effect
+- .table-wrap - Table wrapper for responsive display
+- .two-col - Two column layout
+- .admin-layout - Admin page layout
+- .admin-sidebar - Admin sidebar
+- .admin-content - Admin main content area
+- .admin-nav-item - Sidebar navigation item
+- .tab-panel - Tab content panel
+- .stats-grid - Grid for statistics cards
+- .stat-card - Individual stat card
+
+BUTTON CLASSES:
+- .btn - Base button
+- .btn-primary - Primary action button
+- .btn-secondary - Secondary button
+- .btn-danger - Danger/delete button
+- .btn-success - Success button
+- .btn-outline - Outlined button
+- .btn-ghost - Ghost button
+- .btn-gold - Gold accent button
+- .btn-sm - Small button size
+- .btn-lg - Large button size
+
+FORM CLASSES:
+- .form-group - Form field group
+- .form-control - Input field styling
+- .form-label - Label styling
+- .form-hint - Helper text
+
+GALLERY & CARDS:
+- .gallery-grid - Gallery grid layout
+- .exhibit-card - Exhibit card
+- .card-media-wrap - Media wrapper
+- .card-body - Card content
+- .card-title - Card title
+- .card-creator - Creator info
+- .card-stats - Statistics display
+
+BADGES & TAGS:
+- .badge-* - Status badge (approved, pending, rejected)
+- .category-badge - Category label
+- .badge-art - Art category
+- .badge-photography - Photography category
+
+FORMS & AUTH:
+- .auth-page - Authentication page layout
+- .auth-box - Auth form container
+- .auth-logo - Auth logo section
+- .auth-divider - Form divider
+- .role-selector - Role selection component
+- .role-option - Individual role option
+- .role-icon / .role-name / .role-desc - Role elements
+
+PROFILE:
+- .profile-header - Profile header section
+- .profile-info - Profile information
+- .profile-avatar - User avatar
+- .profile-avatar-placeholder - Avatar placeholder
+- .profile-role - Role badge
+
+COMMENTS:
+- .comment-item - Individual comment
+- .comment-avatar - Comment author avatar
+- .comment-meta - Comment metadata
+- .comment-text - Comment content
+
+INTERACTIONS:
+- .interact-bar - Like/share button container
+- .interact-btn - Interact button
+- .interact-btn.liked - Liked state
+
+UTILITIES:
+- .active - Active state
+- .hidden - Hide element
+- .text-gradient - Gradient text effect
+- .text-gradient-gold - Gold gradient text
+- .loading-overlay - Loading overlay
+- .empty-state - Empty state container
+- .empty-icon - Icon in empty state
+- .pagination - Pagination controls
+- .page-btn - Pagination button
+
+FILTER & SEARCH:
+- .search-bar - Search container
+- .search-input - Search input field
+- .filter-pills - Filter button group
+- .filter-pill - Individual filter button
+
+SECTION HEADERS:
+- .section-header - Section header
+- .section-title - Section title
+- .result-count - Result counter
+
+CSS VARIABLES (Dark Theme):
+- --bg-primary: #0a0a0f (Primary background)
+- --bg-secondary: #0f0f1a (Secondary background)
+- --bg-card: rgba(255, 255, 255, 0.04) (Card background)
+- --bg-glass: rgba(255, 255, 255, 0.05) (Glass effect)
+- --accent-violet: #7c3aed (Primary accent)
+- --accent-violet-light: #a855f7 (Light violet)
+- --accent-gold: #f59e0b (Gold accent)
+- --accent-rose: #f43f5e (Rose/danger)
+- --accent-teal: #14b8a6 (Teal accent)
+- --text-primary: #f1f5f9 (Primary text)
+- --text-secondary: #94a3b8 (Secondary text)
+- --text-muted: #475569 (Muted text)
+- --border-glass: rgba(255, 255, 255, 0.08) (Glass border)
+- --radius-sm: 8px (Small border radius)
+- --radius-md: 14px (Medium border radius)
+- --radius-lg: 20px (Large border radius)
+- --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) (Default transition)
+
+================================================================================
+SECTION 9: JAVASCRIPT FUNCTIONS - BACKEND (Node.js/Express)
+================================================================================
+
+FILE: server.js
+1. createApp() - Initialize Express application with middleware
+2. setupRoutes() - Register all API routes
+3. connectDatabase() - Connect to MongoDB
+4. startServer() - Listen on PORT
+
+FILE: createAdmin.js
+1. createAdmin() - CLI script to create initial admin account
+   - Checks if admin exists
+   - Hashes password
+   - Creates User document with role='admin'
+
+FILE: middleware/auth.js
+1. protect(req, res, next) - JWT verification middleware
+2. creatorOnly(req, res, next) - Creator role check middleware
+3. adminOnly(req, res, next) - Admin role check middleware
+
+FILE: routes/auth.js
+1. router.post('/register', ...) - User registration handler
+   - Validates input
+   - Checks email uniqueness
+   - Creates User document
+   - Returns JWT token
+   - Defaults to 'visitor' role for self-registration
+
+2. router.post('/login', ...) - User login handler
+   - Validates credentials
+   - Checks account status (isBanned)
+   - Compares password
+   - Returns JWT token
+
+3. generateToken(user) - Create JWT token
+   - Payload: { id, role, name }
+   - Expiration: 7 days
+
+FILE: routes/exhibits.js
+1. GET / - Browse exhibits
+   - buildQuery() - Build MongoDB query with filters
+   - Paginate results
+   - Populate creator info
+   - Sort by createdAt descending
+
+2. GET /:id - Get exhibit details
+   - Populate creator information
+
+3. POST / - Create exhibit (Protected, Creator)
+   - Validate required fields
+   - Set status to 'pending'
+   - Attach creator ID
+
+4. PUT /:id - Update exhibit (Protected, Creator)
+   - Verify ownership
+   - Update fields
+   - Reset status to pending
+
+5. DELETE /:id - Delete exhibit (Protected)
+   - Delete exhibit
+   - Cascade delete comments
+
+6. POST /:id/like - Toggle like
+   - Add/remove user from likes array
+
+7. POST /:id/comment - Add comment
+   - Create Comment document
+   - Populate author info
+
+FILE: routes/users.js
+1. GET /profile - Get user profile (Protected)
+   - Return user (without password)
+   - Return user's exhibits
+
+2. PUT /profile - Update profile (Protected)
+   - Update: name, bio, profilePicLink
+
+3. GET /:id - Get public profile
+   - Return user (public fields only)
+   - Return approved exhibits only
+
+FILE: routes/admin.js
+1. GET /stats - Dashboard statistics
+   - Count documents by status
+   - Return all relevant counts
+
+2. GET /users - List all users
+   - Return all users (exclude passwords)
+   - Sort by createdAt descending
+
+3. PUT /users/:id - Update user
+   - Change role
+   - Toggle ban status
+
+4. DELETE /users/:id - Delete user
+   - Cascade delete user's exhibits
+   - Prevent self-deletion
+
+5. GET /exhibits - List exhibits
+   - Optional status filter
+   - Populate creator info
+
+6. PUT /exhibits/:id/approve - Approve exhibit
+   - Set status = 'approved'
+
+7. PUT /exhibits/:id/reject - Reject exhibit
+   - Set status = 'rejected'
+
+8. DELETE /exhibits/:id - Delete exhibit
+   - Cascade delete comments
+
+FILE: models/User.js
+- Pre-save hook: Hash password before saving
+- matchPassword(entered) - Compare passwords
+
+FILE: models/Exhibit.js
+- No custom methods, uses Mongoose defaults
+
+FILE: models/Comment.js
+- No custom methods, uses Mongoose defaults
+
+================================================================================
+SECTION 10: JAVASCRIPT FUNCTIONS - FRONTEND (Vanilla JS)
+================================================================================
+
+FILE: public/js/api.js (Core API & Auth Utilities)
+
+TOKEN MANAGEMENT:
+1. getToken() - Retrieve JWT from localStorage
+2. getUser() - Retrieve user object from localStorage
+3. setAuth(token, user) - Store token and user in localStorage
+4. clearAuth() - Clear authentication data
+5. isLoggedIn() - Check if user is authenticated
+
+CORE API:
+6. apiFetch(endpoint, options) - Wrapper around fetch with JWT
+   - Adds Authorization header
+   - Handles JSON responses
+   - Error handling
+
+API OBJECTS:
+7. authAPI.register(body) - POST /api/auth/register
+8. authAPI.login(body) - POST /api/auth/login
+
+9. exhibitsAPI.getAll(params) - GET /api/exhibits
+10. exhibitsAPI.getOne(id) - GET /api/exhibits/:id
+11. exhibitsAPI.create(body) - POST /api/exhibits
+12. exhibitsAPI.update(id, body) - PUT /api/exhibits/:id
+13. exhibitsAPI.delete(id) - DELETE /api/exhibits/:id
+14. exhibitsAPI.like(id) - POST /api/exhibits/:id/like
+15. exhibitsAPI.share(id) - POST /api/exhibits/:id/share
+16. exhibitsAPI.addComment(id, text) - POST /api/exhibits/:id/comment
+17. exhibitsAPI.getComments(id) - GET /api/exhibits/:id/comments
+
+18. usersAPI.getProfile() - GET /api/users/profile
+19. usersAPI.updateProfile(body) - PUT /api/users/profile
+20. usersAPI.getPublicProfile(id) - GET /api/users/:id
+
+21. adminAPI.getStats() - GET /api/admin/stats
+22. adminAPI.getUsers() - GET /api/admin/users
+23. adminAPI.updateUser(id, body) - PUT /api/admin/users/:id
+24. adminAPI.deleteUser(id) - DELETE /api/admin/users/:id
+25. adminAPI.getExhibits(status) - GET /api/admin/exhibits
+26. adminAPI.approveExhibit(id) - PUT /api/admin/exhibits/:id/approve
+27. adminAPI.rejectExhibit(id) - PUT /api/admin/exhibits/:id/reject
+28. adminAPI.deleteExhibit(id) - DELETE /api/admin/exhibits/:id
+
+NOTIFICATIONS:
+29. showToast(message, type) - Display toast notification
+    - Types: 'success', 'error', 'info'
+    - Auto-dismisses after 3.5s
+
+HELPERS:
+30. formatDate(dateStr) - Format date to "MMM DD, YYYY"
+31. getCategoryBadge(cat) - Return HTML badge for category
+32. getInitials(name) - Get user initials for avatar
+
+NAVBAR:
+33. syncNavbar() - Update navbar based on auth status
+34. logout() - Clear auth and redirect to home
+
+FILE: public/js/auth.js (Login & Register)
+
+1. DOMContentLoaded handler:
+   - Redirect if already logged in
+   - Attach form listeners
+
+2. Login form handler:
+   - Validate email and password
+   - Call authAPI.login()
+   - Store token and user
+   - Redirect based on role
+
+3. Register form handler:
+   - Validate all fields
+   - Get selected role
+   - Call authAPI.register()
+   - Store token and user
+   - Redirect to home
+
+FILE: public/js/browse.js (Gallery/Browse)
+
+STATE VARIABLES:
+1. currentPage - Current pagination page
+2. currentCategory - Active category filter
+3. searchQuery - Current search term
+4. searchTimer - Debounce timer
+
+FUNCTIONS:
+5. loadExhibits() - Load and render gallery
+   - Build query params
+   - Fetch from API
+   - Render exhibit cards
+   - Update pagination
+
+6. createExhibitCard(exhibit, index) - Create exhibit card DOM
+   - Render media (image/video)
+   - Display title, creator, stats
+   - Add click handler to navigate to detail
+
+7. renderMedia(link, type) - Render image or video element
+   - Handle load errors
+   - Lazy loading for images
+
+8. renderPagination(totalPages, activePage) - Render pagination buttons
+   - Generate page buttons
+   - Add click handlers
+
+9. setActiveFilter(category) - Highlight active filter pill
+
+EVENT LISTENERS:
+10. Search input - Debounced search handler
+11. Filter pills - Category filter handlers
+12. Pagination buttons - Page navigation
+
+FILE: public/js/exhibit.js (Single Exhibit Detail)
+
+STATE:
+1. exhibitId - Current exhibit ID from URL
+2. exhibitData - Fetched exhibit data
+
+FUNCTIONS:
+3. loadExhibit() - Fetch and render exhibit details
+   - Get exhibit by ID
+   - Render media (image/video)
+   - Display exhibit info, creator, tags
+   - Show like button state
+   - Show comment form (if logged in)
+   - Show creator actions if own exhibit or admin
+
+4. loadComments() - Fetch and render exhibit comments
+   - Get comments for exhibit
+   - Render comment items with avatars
+
+5. setupInteractions() - Setup event listeners
+   - Like button handler
+   - Share button handler
+   - Comment form handler
+
+6. deleteExhibit() - Delete exhibit after confirmation
+   - Confirm before delete
+   - Call API
+   - Redirect to home
+
+7. escapeHtml(text) - Sanitize HTML in comments
+
+EVENT HANDLERS:
+8. Like button click - Toggle like on exhibit
+9. Share button click - Copy link to clipboard
+10. Comment form submit - Add comment to exhibit
+11. Delete button click - Delete exhibit
+
+FILE: public/js/profile.js (User Profile & Upload)
+
+FUNCTIONS:
+1. loadProfile() - Load user profile and exhibits
+   - Get user profile
+   - Render profile header
+   - Fill profile form
+   - Render user's exhibits
+   - Show upload section for creators
+
+2. renderProfileHeader(user) - Render profile header with avatar and info
+   - Display avatar (image or initials)
+   - Show user info and role badge
+
+3. fillProfileForm(user) - Populate profile form with current data
+
+4. setupProfileForm() - Handle profile edit form submission
+   - Get form values
+   - Call updateProfile API
+   - Update localStorage
+   - Reload profile
+
+5. setupUploadForm() - Handle exhibit upload form submission
+   - Validate fields
+   - Handle media source (URL or file)
+   - Convert file to base64 if needed
+   - Call create exhibit API
+   - Reset form
+   - Reload exhibits
+
+6. setupMediaPreview() - Setup media preview functionality
+   - Toggle between URL and file upload
+   - Update preview on type change
+   - Display image or video preview
+
+7. fileToBase64(file) - Convert file to base64 for upload
+
+8. toggleSource() - Toggle between link and file upload
+   - Show/hide appropriate input
+
+9. updatePreview() - Update preview based on media type
+
+FILE: public/js/admin.js (Admin Panel)
+
+STATE:
+1. activeTab - Current active tab
+
+FUNCTIONS:
+2. switchTab(tab) - Switch between admin tabs
+   - Hide all panels
+   - Show selected panel
+   - Load tab data
+
+3. loadDashboard() - Load and render statistics
+   - Fetch stats from API
+   - Render stat cards with icons
+
+4. loadPendingCount() - Update pending badge count
+
+5. loadPendingExhibits() - Load pending submissions
+   - Fetch pending exhibits
+   - Render pending cards with preview and actions
+
+6. renderPendingCard(ex) - Render individual pending submission card
+   - Show media thumbnail
+   - Show title, description, creator
+   - Add approve/reject/delete buttons
+
+7. loadAdminExhibits(status) - Load exhibits with status filter
+   - Fetch exhibits with optional status filter
+   - Render table with exhibits
+   - Add action buttons
+
+8. loadUsers() - Load all users for management
+   - Fetch all users
+   - Render user table
+   - Allow role change dropdown
+   - Show ban/unban/delete buttons
+
+ADMIN ACTIONS:
+9. approveExhibit(id) - Approve pending exhibit
+   - Call API
+   - Update UI
+   - Refresh relevant lists
+
+10. rejectExhibit(id) - Reject pending exhibit
+    - Call API
+    - Update UI
+    - Refresh relevant lists
+
+11. adminDeleteExhibit(id) - Delete exhibit
+    - Confirm before delete
+    - Call API
+    - Remove from UI
+
+12. changeRole(userId, role) - Change user role
+    - Call API
+    - Show confirmation
+
+13. toggleBan(userId, currentlyBanned) - Ban/unban user
+    - Call API
+    - Reload users list
+
+14. deleteUser(userId) - Delete user
+    - Confirm before delete
+    - Call API
+    - Delete user and their exhibits
+
+================================================================================
+SECTION 11: ENVIRONMENT VARIABLES (.env)
+================================================================================
+
+1. MONGO_URI - MongoDB connection string
+   - Format: mongodb+srv://username:password@cluster.mongodb.net/dbname
+   - Use: Database connection
+
+2. JWT_SECRET - Secret key for JWT signing
+   - Use: Sign and verify tokens
+   - Recommendation: Strong random string (min 32 chars)
+
+3. PORT - Server port number
+   - Default: 5000
+   - Use: HTTP server port
+
+================================================================================
+SECTION 12: FILE STRUCTURE SUMMARY
+================================================================================
+
+ROOT:
+├── server.js (Main Express server)
+├── createAdmin.js (Admin creation script)
+├── package.json (Dependencies)
+├── .env (Environment variables)
+└── .gitignore (Git ignore rules)
+
+MIDDLEWARE:
+├── auth.js (JWT and role-based auth)
+
+MODELS:
+├── User.js (User schema and methods)
+├── Exhibit.js (Exhibit schema)
+└── Comment.js (Comment schema)
+
+ROUTES:
+├── auth.js (Login/Register endpoints)
+├── exhibits.js (Browse/manage exhibits)
+├── users.js (Profile endpoints)
+└── admin.js (Admin management)
+
+PUBLIC (Frontend):
+├── index.html (Gallery page)
+├── login.html (Login page)
+├── register.html (Registration page)
+├── profile.html (User profile page)
+├── exhibit.html (Exhibit detail page)
+├── admin.html (Admin panel)
+├── CSS/
+│   └── style.css (All styles)
+└── JS/
+    ├── api.js (API wrapper and utilities)
+    ├── auth.js (Auth form handlers)
+    ├── browse.js (Gallery logic)
+    ├── exhibit.js (Detail page logic)
+    ├── profile.js (Profile page logic)
+    └── admin.js (Admin panel logic)
+
+================================================================================
+SECTION 13: KEY FEATURES & FUNCTIONALITY
+================================================================================
+
+AUTHENTICATION:
+- User registration (visitor/creator role selection)
+- Email-based login with JWT tokens
+- Password hashing with bcryptjs
+- 7-day token expiration
+- Admin creation via CLI script
+
+USER ROLES:
+- Visitor: Browse exhibits, like, comment
+- Creator: Upload exhibits (pending approval), edit own
+- Admin: Manage users, approve/reject exhibits, view statistics
+
+EXHIBIT MANAGEMENT:
+- Submit exhibits (Art/Photography)
+- Support image and video media
+- Tagging system
+- Like/unlike exhibits
+- Share exhibits (copy link and increment counter)
+- Comment on exhibits
+- Admin approval workflow
+
+USER PROFILES:
+- Edit profile (name, bio, profile picture)
+- View own profile with exhibits
+- View public profiles of other creators
+
+ADMIN FEATURES:
+- Dashboard with statistics
+- Pending submissions queue
+- Exhibit status management (approve/reject)
+- User management (role change, ban/unban)
+- User deletion (cascades to their exhibits)
+- Exhibit deletion
+
+SEARCH & FILTERING:
+- Full-text search (title, description, tags)
+- Category filter (Art/Photography)
+- Pagination with configurable limit
+- Status filtering (admin only)
+
+DATA VALIDATION:
+- Email uniqueness check
+- Password strength (min 6 characters)
+- Required field validation
+- Role-based access control
+- Exhibit status workflow
+
+ERROR HANDLING:
+- Form validation errors
+- API error responses
+- Network error handling
+- Toast notifications for user feedback
+
+================================================================================
+END OF DOCUMENTATION
+================================================================================
