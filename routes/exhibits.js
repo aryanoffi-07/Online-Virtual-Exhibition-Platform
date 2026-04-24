@@ -4,32 +4,90 @@ const Exhibit = require('../models/Exhibit');
 const Comment = require('../models/Comment');
 const { protect, creatorOnly } = require('../middleware/auth');
 
-// GET /api/exhibits — browse all approved exhibits (with search + filter)
+// GET /api/exhibits — browse all approved exhibits (with search + filter + sort)
 router.get('/', async (req, res) => {
   try {
-    const { category, search, page = 1, limit = 12 } = req.query;
-    const query = { status: 'approved' };
+    const { category, search, sortBy, page = 1, limit = 12 } = req.query;
+    const match = { status: 'approved' };
 
     if (category && ['Art', 'Photography'].includes(category)) {
-      query.category = category;
-    }
-    if (search) {
-      query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { tags: { $in: [new RegExp(search, 'i')] } }
-      ];
+      match.category = category;
     }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
-    const total = await Exhibit.countDocuments(query);
-    const exhibits = await Exhibit.find(query)
-      .populate('creator', 'name profilePicLink role')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit));
+    const limitNum = parseInt(limit);
 
-    res.json({ exhibits, total, page: parseInt(page), pages: Math.ceil(total / limit) });
+    // Build aggregation pipeline
+    const pipeline = [
+      { $match: match },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'creator',
+          foreignField: '_id',
+          as: 'creator_info'
+        }
+      },
+      { $unwind: '$creator_info' }
+    ];
+
+    if (search) {
+      const searchRegex = new RegExp(search, 'i');
+      pipeline.push({
+        $match: {
+          $or: [
+            { title: searchRegex },
+            { description: searchRegex },
+            { tags: { $in: [searchRegex] } },
+            { 'creator_info.name': searchRegex }
+          ]
+        }
+      });
+    }
+
+    pipeline.push({
+      $addFields: {
+        likeCount: { $size: { $ifNull: ['$likes', []] } }
+      }
+    });
+
+    let sortObj = { createdAt: -1 };
+    if (sortBy === 'likes') sortObj = { likeCount: -1, createdAt: -1 };
+    if (sortBy === 'shares') sortObj = { shareCount: -1, createdAt: -1 };
+    
+    pipeline.push({ $sort: sortObj });
+
+    const totalPipeline = [...pipeline, { $count: 'total' }];
+    const totalRes = await Exhibit.aggregate(totalPipeline);
+    const total = totalRes.length > 0 ? totalRes[0].total : 0;
+
+    pipeline.push({ $skip: skip });
+    pipeline.push({ $limit: limitNum });
+
+    pipeline.push({
+      $project: {
+        title: 1,
+        description: 1,
+        category: 1,
+        mediaLink: 1,
+        mediaType: 1,
+        creator: '$creator_info',
+        likes: 1,
+        shareCount: 1,
+        tags: 1,
+        createdAt: 1,
+        likeCount: 1
+      }
+    });
+
+    const exhibits = await Exhibit.aggregate(pipeline);
+
+    res.json({ 
+      exhibits, 
+      total, 
+      page: parseInt(page), 
+      pages: Math.ceil(total / limitNum) 
+    });
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }

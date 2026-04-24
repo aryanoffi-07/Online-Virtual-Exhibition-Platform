@@ -5,6 +5,7 @@
 let currentPage = 1;
 let currentCategory = '';
 let searchQuery = '';
+let currentSort = 'latest';
 let searchTimer = null;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -40,6 +41,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // Sort select
+  const sortSelect = document.getElementById('sort-select');
+  if (sortSelect) {
+    sortSelect.addEventListener('change', (e) => {
+      currentSort = e.target.value;
+      currentPage = 1;
+      loadExhibits();
+    });
+  }
+
   // Update hero create button
   const heroCta = document.getElementById('hero-create-btn');
   if (heroCta && isLoggedIn()) {
@@ -63,6 +74,7 @@ async function loadExhibits() {
     const params = { page: currentPage, limit: 12 };
     if (currentCategory) params.category = currentCategory;
     if (searchQuery) params.search = searchQuery;
+    if (currentSort) params.sortBy = currentSort;
 
     const data = await exhibitsAPI.getAll(params);
 
